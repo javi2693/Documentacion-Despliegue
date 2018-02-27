@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: javi.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: javi.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>$(document).ready(function () {
+    var win = $(window);
+    $("#busca").click(function () {
+        buscar()
+    });
+    $("#pagina").keypress(function (tecla) {
+        if (tecla.which === 13) {
+            buscar();
+        }
+    });
+    win.scroll(function () {
+        if ($(document).height() - win.height() == win.scrollTop()) {
+            if (paso_scroll === true) {
+                paso_scroll = false;
+                coleccion.vaciar_coleccion();
+                ajaxBusca(numPagina);
+                paso_scroll = true;
+            }
+        }
+    });
+});
+
+/**
+ * Represents a movie.
+ * @constructor
+ * @param {string} imdbID - The id of the movie.
+ * @param {string} titulo - The title of the movie.
+ * @param {string} lanzamiento - The release of the movie.
+ * @param {string} imagen - The image of the movie.
+ * @param {string} duracion - The runtime of the movie.
+ * @param {string} genero - The genre of the movie.
+ * @param {string} director - The director of the movie.
+ * @param {string} descripcion - The description of the movie.
+ */
+class Pelicula {
+    constructor(imdbID = "", titulo = "", lanzamiento = "", imagen = "", duracion = "", genero = "", director = "", descripcion = "") {
+        this.titulo = titulo;
+        this.lanzamiento = lanzamiento;
+        this.imdbID = imdbID;
+        this.imagen = imagen;
+        this.duracion = duracion;
+        this.genero = genero;
+        this.director = director;
+        this.descripcion = descripcion;
+    }
+}
+
+/**
+ * Represents a set of movies.
+ * @constructor
+ * @param {array} colecc_pelis - Represents the movie objects.
+ */
+class ConjuntoPelis {
+    constructor() {
+        this.colecc_pelis = [];
+    }
+
+    anadir_pelicula(objeto) {
+        this.colecc_pelis.push(objeto);
+        if (this.colecc_pelis.length == 10) {
+            dibujaPeliculas();
+        }
+    }
+
+    vaciar_coleccion() {
+        this.colecc_pelis = [];
+    }
+}
+
+var numPagina = 1;
+var coleccion = new ConjuntoPelis();
+var paso_scroll = true;
+var jsonBusqueda = [];
+
+/** This function verifies if the content is empty, if so, it shows that message. 
+ * On the contrary, it shows the content of the found when calling said function */
+function buscar() {
+    if ($("#contenido").val().length == 0) {
+        alert("Debes buscar algun titulo!");
+    } else {
+        $("#alerta").remove();
+        buscarPelicula();
+    }
+}
+
+/** This function creates a movie object with the following parameters, in case the film coincides with N / A, an image is applied. 
+ * Then add the movie to a collection of movies */
+function crearPelicula() {
+    if (jsonPelicula.Poster == "N/A") {
+        jsonPelicula.Poster = "img/notfound.png"
+    }
+    peli = new Pelicula(jsonPelicula.imdbID, jsonPelicula.Title, jsonPelicula.Released, jsonPelicula.Poster,
+        jsonPelicula.Runtime, jsonPelicula.Genre, jsonPelicula.Director, jsonPelicula.Plot);
+    coleccion.anadir_pelicula(peli);
+}
+
+/** This function looks in the api indicated a set of movies and saves them in the function guardaPeliculas */
+function ajaxBusca(pagina = 1) {
+    $.ajax({
+        url: 'https://www.omdbapi.com/?apikey=727edf2b&amp;s=' + busqueda + '&amp;type=movie&amp;page=' + pagina,
+        type: 'GET',
+        dataType: 'json',
+        success: function (response) {
+            jsonBusqueda = JSON.stringify(response);
+            jsonBusqueda = JSON.parse(jsonBusqueda);
+            numPagina++;
+            guardaPeliculas();
+        }
+    })
+}
+
+/** This function runs through an array of searches and saves them in the ajaxPeli function with its corresponding ID */
+function guardaPeliculas() {
+    for (var i = 0; i &lt; jsonBusqueda.Search.length; i++) {
+        ajaxPeli(jsonBusqueda.Search[i].imdbID);
+    }
+}
+
+/** Function that picks up the JSON from the omdb API and then enters the function crearPelicula */
+function ajaxPeli(imdbID) {
+    $.ajax({
+        url: 'https://www.omdbapi.com/?apikey=727edf2b&amp;i=' + imdbID + '&amp;plot=full',
+        type: 'GET',
+        dataType: 'json',
+        success: function (response) {
+            jsonPelicula = JSON.stringify(response);
+            jsonPelicula = JSON.parse(jsonPelicula);
+            crearPelicula();
+        }
+    })
+}
+
+/** This function runs through the collection of movies and structures them correctly to the HTML file */
+function dibujaPeliculas() {
+    var div = $("#films");
+    for (let x = 0; x &lt; coleccion.colecc_pelis.length; x++) {
+        div.append('&lt;div class="row azul">&lt;div class="col-md-3 col-sm-3 col-12">' +
+            '&lt;img class="aumento" src="' + coleccion.colecc_pelis[x].imagen + '"/>&lt;/div>' +
+            '&lt;div class="col-md-9 col-sm-9 col-12">&lt;div class="row">&lt;h2>' +
+            coleccion.colecc_pelis[x].titulo + '&lt;/h2>&lt;/div>&lt;div class="row">&lt;div class="descrip">&lt;b>Sinopsis:&lt;/b>' +
+            coleccion.colecc_pelis[x].descripcion + '&lt;hr>&lt;div class="demas">&lt;b>Genre:&lt;/b>' +
+            coleccion.colecc_pelis[x].genero + '&lt;hr>&lt;b>Released:&lt;/b>' + coleccion.colecc_pelis[x].lanzamiento +
+            '&lt;hr>&lt;b>Runtime:&lt;/b>' + coleccion.colecc_pelis[x].duracion + '&lt;hr>&lt;b>Director:&lt;/b>' +
+            coleccion.colecc_pelis[x].director + '&lt;/div>&lt;/div>&lt;/div>&lt;/div>&lt;/div>'
+        )
+        ;
+    }
+}
+
+/** The next function looks for the input in the content, then empty the collection and call the function ajaxBusca */
+function buscarPelicula() {
+    $("#films").empty();
+    busqueda = $("#contenido").val();
+    $("#contenido").val("");
+    coleccion.vaciar_coleccion();
+    numPagina = 1;
+    ajaxBusca(numPagina);
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="ConjuntoPelis.html">ConjuntoPelis</a></li><li><a href="Pelicula.html">Pelicula</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ajaxBusca">ajaxBusca</a></li><li><a href="global.html#ajaxPeli">ajaxPeli</a></li><li><a href="global.html#buscar">buscar</a></li><li><a href="global.html#buscarPelicula">buscarPelicula</a></li><li><a href="global.html#crearPelicula">crearPelicula</a></li><li><a href="global.html#dibujaPeliculas">dibujaPeliculas</a></li><li><a href="global.html#guardaPeliculas">guardaPeliculas</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Tue Feb 27 2018 10:12:03 GMT+0100 (Hora estándar romance)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
